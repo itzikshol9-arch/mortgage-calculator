@@ -272,11 +272,19 @@ function TrackMixer({ principal, years }) {
   );
 }
 
+const LEAD_STAGES_OPTIONS = [
+  { id: "looking",   label: "מחפשים נכס" },
+  { id: "found",     label: "מצאנו נכס" },
+  { id: "approved",  label: "יש אישור עקרוני" },
+  { id: "refinance", label: "מחזור משכנתא" },
+];
+
 // ─── Lead gate ────────────────────────────────────────────────────────────────
 function LeadGate({ onSubmit, onSkip, agentName }) {
-  const [name,  setName]  = useState("");
-  const [phone, setPhone] = useState("");
-  const [error, setError] = useState("");
+  const [name,      setName]      = useState("");
+  const [phone,     setPhone]     = useState("");
+  const [stage,     setStage]     = useState("");
+  const [error,     setError]     = useState("");
   const nameRef = useRef(null);
 
   useEffect(() => { nameRef.current && nameRef.current.focus(); }, []);
@@ -285,10 +293,10 @@ function LeadGate({ onSubmit, onSkip, agentName }) {
 
   const submit = (e) => {
     e.preventDefault();
-    if (!name.trim())   { setError("נא להזין שם"); return; }
-    if (!phoneValid)    { setError("מספר טלפון לא תקין"); return; }
+    if (!name.trim()) { setError("נא להזין שם"); return; }
+    if (!phoneValid)  { setError("מספר טלפון לא תקין"); return; }
     setError("");
-    onSubmit({ name: name.trim(), phone: phone.trim() });
+    onSubmit({ name: name.trim(), phone: phone.trim(), stage });
   };
 
   return (
@@ -306,6 +314,21 @@ function LeadGate({ onSubmit, onSkip, agentName }) {
           <input type="tel" inputMode="tel" placeholder="050-1234567"
             value={phone} onChange={e => setPhone(e.target.value)}
             className="lead-input" dir="ltr" style={{ textAlign: "right" }} />
+
+          <div className="stage-label">באיזה שלב אתם?</div>
+          <div className="stage-btns">
+            {LEAD_STAGES_OPTIONS.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                className={`stage-btn ${stage === s.id ? "stage-on" : ""}`}
+                onClick={() => setStage(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
           {error && <div className="lead-error">{error}</div>}
           <button type="submit" className="lead-submit">קבלו את הפירוט המלא</button>
         </form>
@@ -414,6 +437,7 @@ export default function MortgageCalculator() {
         body: JSON.stringify({
           name: data.name,
           phone: data.phone,
+          stage: data.stage || "לא צוין",
           mode: mode === "payment" ? "החזר חודשי" : "זכאות למשכנתא",
           submittedAt: new Date().toLocaleString("he-IL"),
         }),
@@ -1222,6 +1246,23 @@ const CSS = `
   cursor: pointer; margin-top: 4px; transition: background 0.15s;
 }
 .lead-submit:hover { background: var(--copper-deep); }
+.stage-label {
+  font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 4px;
+}
+.stage-btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+}
+.stage-btn {
+  border: 1.5px solid var(--line); background: var(--stone);
+  padding: 10px 8px; border-radius: 10px;
+  font-family: 'Heebo', sans-serif; font-size: 12.5px; font-weight: 500;
+  color: var(--ink-soft); cursor: pointer; text-align: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.stage-btn.stage-on {
+  background: var(--ink); color: var(--stone); border-color: var(--ink);
+}
+
 .lead-skip {
   display: block; margin: 12px auto 0;
   background: none; border: none; color: var(--ink-soft);
