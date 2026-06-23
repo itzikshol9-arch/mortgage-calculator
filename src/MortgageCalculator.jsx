@@ -2,6 +2,13 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 
 const GOOGLE_SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxv8wxQQY3DjEOskosRGfe19zr_--a2h1dgjavJn3n754Fa4EqrlFHqdduAw2vE5gXG/exec";
 
+// ─── Analytics helper ─────────────────────────────────────────────────────────
+function track(eventName, params = {}) {
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", eventName, params);
+  }
+}
+
 // ─── Market data (June 2026) ──────────────────────────────────────────────────
 const BOI_RATE    = 3.75;   // ריבית בנק ישראל
 const PRIME_RATE  = 5.25;   // פריים = BOI + 1.5%
@@ -417,11 +424,19 @@ export default function MortgageCalculator() {
   const [leadData,    setLeadData]    = useState(null);
   const [submittedKey, setSubmittedKey] = useState(null);
 
+  const switchMode = (m) => {
+    setMode(m);
+    track("calculator_mode_switch", { mode: m });
+  };
+
   useEffect(() => { setLeadStage("hidden"); }, [mode]);
 
   useEffect(() => {
     if (resultReady && leadStage === "hidden") {
-      const t = setTimeout(() => setLeadStage("gate"), 450);
+      const t = setTimeout(() => {
+        setLeadStage("gate");
+        track("lead_form_shown", { calculator_mode: mode });
+      }, 450);
       return () => clearTimeout(t);
     }
   }, [resultReady, leadStage]);
@@ -429,6 +444,10 @@ export default function MortgageCalculator() {
   const handleLeadSubmit = async (data) => {
     setLeadData(data);
     setLeadStage("unlocked");
+    track("lead_submitted", {
+      calculator_mode: mode,
+      purchase_stage: data.stage || "none",
+    });
     try {
       await fetch(GOOGLE_SHEET_WEBHOOK_URL, {
         method: "POST",
@@ -462,10 +481,10 @@ export default function MortgageCalculator() {
       <ContactBanner />
 
       <div className="mode-switch">
-        <button className={mode === "payment" ? "active" : ""} onClick={() => setMode("payment")}>
+        <button className={mode === "payment" ? "active" : ""} onClick={() => switchMode("payment")}>
           חישוב החזר חודשי
         </button>
-        <button className={mode === "eligibility" ? "active" : ""} onClick={() => setMode("eligibility")}>
+        <button className={mode === "eligibility" ? "active" : ""} onClick={() => switchMode("eligibility")}>
           כמה משכנתא מגיע לי?
         </button>
       </div>
@@ -477,7 +496,13 @@ export default function MortgageCalculator() {
           <EligibilityCalculatorWrapper onResultReady={setResultReady} leadStage={leadStage} />
         )}
         {leadStage === "gate" && (
-          <LeadGate onSubmit={handleLeadSubmit} onSkip={() => setLeadStage("skipped")} />
+          <LeadGate
+            onSubmit={handleLeadSubmit}
+            onSkip={() => {
+              setLeadStage("skipped");
+              track("lead_form_skipped", { calculator_mode: mode });
+            }}
+          />
         )}
       </div>
 
@@ -532,10 +557,12 @@ function ContactBanner() {
         <span className="contact-banner-sub">שיחת ייעוץ קצרה, בלי התחייבות</span>
       </div>
       <div className="contact-banner-actions">
-        <a className="contact-btn whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer">
+        <a className="contact-btn whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer"
+           onClick={() => track("contact_click", { method: "whatsapp", location: "banner" })}>
           <WhatsAppIcon /><span>וואטסאפ</span>
         </a>
-        <a className="contact-btn call" href={TEL_LINK}>
+        <a className="contact-btn call" href={TEL_LINK}
+           onClick={() => track("contact_click", { method: "phone", location: "banner" })}>
           <PhoneIcon /><span>{AGENT_PHONE_DISPLAY}</span>
         </a>
       </div>
@@ -546,10 +573,12 @@ function ContactBanner() {
 function StickyContactBar() {
   return (
     <div className="sticky-contact-bar">
-      <a className="sticky-btn call" href={TEL_LINK} aria-label="התקשרו עכשיו">
+      <a className="sticky-btn call" href={TEL_LINK} aria-label="התקשרו עכשיו"
+         onClick={() => track("contact_click", { method: "phone", location: "sticky" })}>
         <PhoneIcon /><span>התקשרו</span>
       </a>
-      <a className="sticky-btn whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer" aria-label="פנו בוואטסאפ">
+      <a className="sticky-btn whatsapp" href={WA_LINK} target="_blank" rel="noopener noreferrer" aria-label="פנו בוואטסאפ"
+         onClick={() => track("contact_click", { method: "whatsapp", location: "sticky" })}>
         <WhatsAppIcon /><span>וואטסאפ</span>
       </a>
     </div>
@@ -584,13 +613,13 @@ function PaymentCalculatorWrapper({ onResultReady, leadStage }) {
       <div className="calc-mode-switch">
         <button
           className={`cms-btn ${calcMode === "single" ? "cms-on" : ""}`}
-          onClick={() => setCalcMode("single")}
+          onClick={() => { setCalcMode("single"); track("calc_mode_switch", { mode: "single" }); }}
         >
           מסלול יחיד
         </button>
         <button
           className={`cms-btn ${calcMode === "mix" ? "cms-on" : ""}`}
-          onClick={() => setCalcMode("mix")}
+          onClick={() => { setCalcMode("mix"); track("calc_mode_switch", { mode: "mix" }); }}
         >
           תמהיל מסלולים ✦
         </button>
@@ -665,7 +694,8 @@ function PaymentCalculatorWrapper({ onResultReady, leadStage }) {
           כדי להגיע להחזר החודשי הנמוך ביותר ולתנאים הטובים ביותר, צריך לבנות תמהיל
           אופטימלי בהתאמה אישית — לפי הכנסה, אופק, ורמת הסיכון שלכם.
         </p>
-        <a className="mix-cta-btn" href={WA_LINK} target="_blank" rel="noopener noreferrer">
+        <a className="mix-cta-btn" href={WA_LINK} target="_blank" rel="noopener noreferrer"
+           onClick={() => track("contact_click", { method: "whatsapp", location: "mix_cta" })}>
           בואו נבנה תמהיל אישי בוואטסאפ
         </a>
       </div>
