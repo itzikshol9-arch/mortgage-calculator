@@ -310,11 +310,16 @@ function LeadGate({ onSubmit, onSkip, agentName }) {
     <div className="lead-gate">
       <div className="lead-gate-inner">
         <div className="lead-icon">✓</div>
-        <h3>התוצאה שלך מוכנה</h3>
+        <h3>שמור את החישוב שלך</h3>
         <p className="lead-sub">
-          השאירו פרטים לקבלת הפירוט המלא — לוח סילוקין, יחס מימון, והמלצה
-          אישית{agentName ? ` מ${agentName}` : ""}.
+          נשלח לכם את הפירוט המלא — לוח סילוקין, תמהיל מומלץ
+          {agentName ? ` והמלצה אישית מ${agentName}` : " והמלצה אישית"}.
         </p>
+        <div className="trust-badges">
+          <span>✓ ייעוץ חינם</span>
+          <span>✓ ללא התחייבות</span>
+          <span>✓ מאות לקוחות מרוצים</span>
+        </div>
         <form onSubmit={submit} className="lead-form">
           <input ref={nameRef} type="text" placeholder="שם מלא"
             value={name} onChange={e => setName(e.target.value)} className="lead-input" />
@@ -337,9 +342,9 @@ function LeadGate({ onSubmit, onSkip, agentName }) {
           </div>
 
           {error && <div className="lead-error">{error}</div>}
-          <button type="submit" className="lead-submit">קבלו את הפירוט המלא</button>
+          <button type="submit" className="lead-submit">שלחו לי את הפירוט המלא ←</button>
         </form>
-        <button className="lead-skip" onClick={onSkip}>לא עכשיו, תודה</button>
+        <button className="lead-skip" onClick={onSkip}>דלג, אראה תוצאה חלקית</button>
       </div>
     </div>
   );
@@ -1259,7 +1264,17 @@ const CSS = `
   font-family: 'Frank Ruhl Libre', serif;
   font-size: 21px; margin: 0 0 6px; color: var(--ink);
 }
-.lead-sub   { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 18px; line-height: 1.5; }
+.lead-sub   { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 12px; line-height: 1.5; }
+.trust-badges {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.trust-badges span {
+  font-size: 11.5px; font-weight: 600; color: var(--sage);
+  background: rgba(124,139,122,0.12);
+  padding: 4px 9px; border-radius: 20px;
+  white-space: nowrap;
+}
 .lead-form  { display: flex; flex-direction: column; gap: 10px; }
 .lead-input {
   border: 1.5px solid var(--line); border-radius: 10px;
@@ -1294,9 +1309,10 @@ const CSS = `
 }
 
 .lead-skip {
-  display: block; margin: 12px auto 0;
+  display: block; margin: 10px auto 0;
   background: none; border: none; color: var(--ink-soft);
-  font-size: 12.5px; text-decoration: underline; cursor: pointer;
+  font-size: 11px; opacity: 0.55; cursor: pointer;
+  text-decoration: none;
 }
 
 .thanks-strip {
